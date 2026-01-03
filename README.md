@@ -44,7 +44,7 @@ nano config.yaml
 
 cd ..
 cd ..
-nano docker-compose-all-src.yml up
+nano docker-compose-all-src.yml
 
 ---Change "ports:
       - 3000:3000"
