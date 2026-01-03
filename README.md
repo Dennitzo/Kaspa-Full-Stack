@@ -18,11 +18,11 @@ git clone https://github.com/thesheepcat/K-indexer.git
 cd K-indexer/docker/PROD
 rm .env
 nano .env
----Copy paste from https://github.com/Dennitzo/Kaspa-Full-Stack/k-indexer_env.txt
+---Copy paste from https://github.com/Dennitzo/Kaspa-Full-Stack/blob/main/K-indexer_env.txt
 ---Save and close file
 rm compose.yaml
 nano compose.yaml
----Copy paste from https://github.com/Dennitzo/Kaspa-Full-Stack/compose.yaml
+---Copy paste from https://github.com/Dennitzo/Kaspa-Full-Stack/blob/main/compose.yaml
 ---Save and close file
 docker compose up -d
 ```
@@ -54,6 +54,7 @@ nano docker-compose-all-src.yml up
 
 docker compose -f docker-compose-all-src.yml up -d --build
 ```
+
 > 6. K-Social:
 ```
 git clone https://github.com/thesheepcat/K.git
