@@ -1,7 +1,8 @@
-Kaspa-Full-Stack
-Tutorial for Kaspa Full Stack (Explorer, API, Indexer, Database, Rusty Kaspad, Stratum Bridge and K-Social)
+# Kaspa-Full-Stack
 
-1. Install Docker:
+### Tutorial for Kaspa Full Stack (Explorer, API, Indexer, Database, Rusty Kaspad, Stratum Bridge and K-Social)
+
+> 1. Install Docker:
 ```
 sudo apt install -y curl
 curl -fsSL https://get.docker.com -o get-docker.sh
@@ -9,7 +10,9 @@ sudo sh get-docker.sh
 sudo apt install -y docker-compose
 ```
 
-2. K-indexer:
+> 2. Install NodeJS from https://nodejs.org/en/download
+
+> 3. K-indexer:
 ```
 git clone https://github.com/thesheepcat/K-indexer.git
 cd K-indexer/docker/PROD
@@ -24,22 +27,12 @@ nano compose.yaml
 docker compose up -d
 ```
 
-3. Install NodeJS from https://nodejs.org/en/download
-
-4. K-Social:
-```
-git clone https://github.com/thesheepcat/K.git
-cd K
-npm install
-npm run dev
-```
-
-5. Wait for Kaspad and indexer to fully sync:
+> 4. Wait for Kaspad and indexer to fully sync:
 ```
 docker logs -n 100 -f kaspad
 ```
 
-6. Kaspa Stratum Bridge:
+> 5. Kaspa Stratum Bridge:
 ```
 git clone https://github.com/rdugan/kaspa-stratum-bridge.git
 cd kaspa-stratum-bridge/cmd/kaspabridge
@@ -52,16 +45,21 @@ nano config.yaml
 cd ..
 cd ..
 nano docker-compose-all-src.yml up
+
 ---Change "ports:
       - 3000:3000"
     to "ports:
       - 5000:3000"
 ---Save and close File
+
 docker compose -f docker-compose-all-src.yml up -d --build
 ```
-
-7. K-Social:
+> 6. K-Social:
 ```
+git clone https://github.com/thesheepcat/K.git
+cd K
+npm install
+npm run dev
 Open http://yourDomainOrIP:5173 in your Browser
 Go to Settings
 Set Indexer to "Custom Indexer", and set "Indexer URL" to http://yourDomainOrIP:8600
