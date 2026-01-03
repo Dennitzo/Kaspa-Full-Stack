@@ -1,0 +1,210 @@
+volumes:
+  portainer_data:
+  prometheus_data:
+  grafana_data:
+  kaspa_db_data:
+  k_indexer_db_data:
+
+services:
+  # ----------- KASPA NODE SERVICES -----------
+  kaspad:
+    container_name: kaspad
+    image: supertypo/rusty-kaspad:latest
+    restart: unless-stopped
+    ports:
+      - "16110:16110"
+      - "17110:17110"
+    volumes:
+      - /var/kaspad:/app/data/
+    command: >
+      kaspad
+      --yes
+      --nologfiles
+      --disable-upnp
+      --utxoindex
+      --rpclisten=0.0.0.0:16110
+      --rpclisten-borsh=0.0.0.0:17110
+
+  kaspa_db:
+    container_name: kaspa_db
+    image: postgres:17-alpine
+    restart: unless-stopped
+    shm_size: 4G
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - kaspa_db_data:/var/lib/postgresql/data/
+
+  kaspa_rest_server:
+    container_name: kaspa_rest_server
+    image: kaspanet/kaspa-rest-server:latest
+    restart: unless-stopped
+    environment:
+      KASPAD_WRPC_URL: ws://kaspad:17110
+      SQL_URI: postgresql+asyncpg://postgres:postgres@kaspa_db:5432/postgres
+      USE_SCRIPT_FOR_ADDRESS: "true"
+    ports:
+      - "8000:8000"
+    depends_on:
+      - kaspad
+      - kaspa_db
+
+  simply_kaspa_socket_server:
+    container_name: simply_kaspa_socket_server
+    image: supertypo/simply-kaspa-socket-server:unstable
+    restart: unless-stopped
+    command: -x 20 -s ws://kaspad:17110
+    ports:
+      - "8001:8000"
+    depends_on:
+      - kaspad
+
+  simply_kaspa_indexer:
+    container_name: simply_kaspa_indexer
+    image: supertypo/simply-kaspa-indexer:latest
+    restart: unless-stopped
+    command: >
+      -u
+      -s ws://kaspad:17110
+      -d postgresql://postgres:postgres@kaspa_db:5432/postgres
+      --exclude-fields=tx_out_script_public_key_address
+      --prune-db
+      --retention=7d
+    ports:
+      - "8500:8500"
+    depends_on:
+      - kaspad
+      - kaspa_db
+
+  kaspa_explorer:
+    container_name: kaspa_explorer
+    image: supertypo/kaspa-explorer:latest
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    environment:
+      API_URI: http://kaspa_rest_server:8000
+      API_WS_URI: ws://kaspa_rest_server:8001
+    depends_on:
+      - kaspa_rest_server
+      - simply_kaspa_socket_server
+
+  # ----------- INDEXER 2.0 SERVICES -----------
+  k-indexer-db:
+    container_name: k-indexer-db
+    image: postgres:17-alpine
+    restart: unless-stopped
+    shm_size: 4G
+    environment:
+      POSTGRES_USER: indexer
+      POSTGRES_PASSWORD: indexerpass
+      POSTGRES_DB: indexerdb
+      PGPORT: 5433
+    ports:
+      - "5433:5433"
+    volumes:
+      - k_indexer_db_data:/var/lib/postgresql/data/
+    command: >
+      -c shared_preload_libraries=pg_stat_statements
+      -c pg_stat_statements.max=10000
+      -c pg_stat_statements.track=all
+      -c pg_stat_statements.save=on
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U indexer"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  simply-kaspa-indexer-2:
+    container_name: simply-kaspa-indexer-2
+    image: supertypo/simply-kaspa-indexer:latest
+    restart: unless-stopped
+    command: >
+      -s ws://kaspad:17110
+      -l 0.0.0.0:8501
+      -d postgres://indexer:indexerpass@k-indexer-db:5433/indexerdb
+      --prune-db="0 * * * *"
+      --retention=1h
+      --disable=virtual_chain_processing,transaction_acceptance,blocks_table,block_parent_table,blocks_transactions_table,transactions_inputs_table,transactions_outputs_table,addresses_transactions_table,initial_utxo_import,vcp_wait_for_sync
+      --exclude-fields=block_accepted_id_merkle_root,block_merge_set_blues_hashes,block_merge_set_reds_hashes,block_selected_parent_hash,block_bits,block_blue_work,block_blue_score,block_daa_score,block_hash_merkle_root,block_nonce,block_pruning_point,block_timestamp,block_utxo_commitment,block_version,tx_subnetwork_id,tx_hash,tx_mass,tx_in_previous_outpoint,tx_in_signature_script,tx_in_sig_op_count,tx_in_block_time,tx_out_amount,tx_out_script_public_key,tx_out_script_public_key_address,tx_out_block_time
+    depends_on:
+      - k-indexer-db
+    ports:
+      - "8501:8501"
+    healthcheck:
+      test: ["CMD-SHELL", "netstat -tuln | grep ':8501 ' || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+  k-transaction-processor:
+    container_name: k-transaction-processor
+    image: thesheepcat/k-transaction-processor:latest
+    restart: unless-stopped
+    command: >
+      --upgrade-db
+      --network mainnet
+      --db-host k-indexer-db
+      --db-port 5433
+      --db-name indexerdb
+      --db-user indexer
+      --db-password indexerpass
+      --db-max-connections 10
+      --workers 4
+      --channel transaction_channel
+      --retry-attempts 3
+      --retry-delay 1000
+    depends_on:
+      - k-indexer-db
+      - simply-kaspa-indexer-2
+    healthcheck:
+      test: ["CMD-SHELL", "pgrep -f K-transaction-processor || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+  k-webserver:
+    container_name: k-webserver
+    image: thesheepcat/k-webserver:latest
+    restart: unless-stopped
+    command: >
+      --db-host k-indexer-db
+      --db-port 5433
+      --db-name indexerdb
+      --db-user indexer
+      --db-password indexerpass
+      --bind-address 0.0.0.0:8600
+      --worker-threads 6
+      --db-max-connections 18
+      --request-timeout 30
+      --rate-limit 200
+    depends_on:
+      - k-indexer-db
+      - simply-kaspa-indexer-2
+      - k-transaction-processor
+    ports:
+      - "8600:8600"
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:8600/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+  # ----------- PORTAINER -----------
+  portainer:
+    container_name: portainer
+    image: portainer/portainer-ce:latest
+    restart: unless-stopped
+    ports:
+      - "9000:9000"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - portainer_data:/data
