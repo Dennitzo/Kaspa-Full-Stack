@@ -66,3 +66,12 @@ Go to Settings
 Set Indexer to "Custom Indexer", and set "Indexer URL" to http://yourDomainOrIP:8600
 Set Kaspa node connection to "Your Kaspa node", and set "Kaspa node URL" to ws://yourDomainOrIP:17110
 ```
+
+> Ports:
+```
+Explorer: http://yourDomainOrIP:8080
+K-Social: http://yourDomainOrIP:5173
+API: http://yourDomainOrIP:8000
+Stratum Bridge: http://yourDomainOrIP:5000
+Miner Connection: stratum+tcp://yourDomainOrIP:5555
+```
