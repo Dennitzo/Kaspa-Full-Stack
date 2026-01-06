@@ -5,7 +5,7 @@
 > 1. Install Docker:
 ```
 sudo apt install -y curl
-curl -fsSL https://get.docker.com -o get-docker.sh
+sudo curl -fsSL https://get.docker.com -o get-docker.sh
 sudo sh get-docker.sh
 sudo apt install -y docker-compose
 ```
@@ -24,12 +24,12 @@ rm compose.yaml
 nano compose.yaml
 ---Copy paste from https://github.com/Dennitzo/Kaspa-Full-Stack/blob/main/compose.yaml
 ---Save and close file
-docker compose up -d
+sudo docker compose up -d
 ```
 
 > 4. Wait for Kaspad and indexer to fully sync:
 ```
-docker logs -n 100 -f kaspad
+sudo docker logs -n 100 -f kaspad
 ```
 
 > 5. Kaspa Stratum Bridge:
@@ -52,7 +52,7 @@ nano docker-compose-all-src.yml
       - 5000:3000"
 ---Save and close File
 
-docker compose -f docker-compose-all-src.yml up -d --build
+sudo docker compose -f docker-compose-all-src.yml up -d --build
 ```
 
 > 6. K-Social:
@@ -78,8 +78,8 @@ nano vite.config.ts
     }
   },"
 ---Save and close File
-npm install
-npm run dev
+sudo npm install
+sudo npm run dev
 Open http://yourDomainOrIP:5173 in your Browser
 Go to Settings
 Set Indexer to "Custom Indexer", and set "Indexer URL" to http://yourDomainOrIP:3001
