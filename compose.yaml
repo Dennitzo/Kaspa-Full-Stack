@@ -37,7 +37,7 @@ services:
       POSTGRES_PASSWORD: ${DB_PASSWORD}
       POSTGRES_DB: ${DB_NAME}
     ports:
-      - "${DB_PORT}:${DB_PORT}"
+      - "5432:5432"
     volumes:
       - kaspa_db_data:/var/lib/postgresql/data/
 
@@ -46,8 +46,8 @@ services:
     image: kaspanet/kaspa-rest-server:latest
     restart: unless-stopped
     environment:
-      KASPAD_WRPC_URL: ws://${KASPA_NODE_ADDRESS}:${KASPA_NODE_PORT}
-      SQL_URI: postgresql+asyncpg://${DB_USER}:${DB_PASSWORD}@kaspa_db:${DB_PORT}/${DB_NAME}
+      KASPAD_WRPC_URL: ws://kaspad:${KASPA_NODE_PORT}
+      SQL_URI: postgresql+asyncpg://${DB_USER}:${DB_PASSWORD}@kaspa_db:5432/${DB_NAME}
       USE_SCRIPT_FOR_ADDRESS: "true"
     ports:
       - "8000:8000"
@@ -59,7 +59,7 @@ services:
     container_name: simply_kaspa_socket_server
     image: supertypo/simply-kaspa-socket-server:unstable
     restart: unless-stopped
-    command: -x 20 -s ws://${KASPA_NODE_ADDRESS}:${KASPA_NODE_PORT}
+    command: -x 20 -s ws://kaspad:${KASPA_NODE_PORT}
     ports:
       - "8001:8000"
     depends_on:
@@ -71,8 +71,8 @@ services:
     restart: unless-stopped
     command: >
       -u
-      -s ws://${KASPA_NODE_ADDRESS}:${KASPA_NODE_PORT}
-      -d postgresql://${DB_USER}:${DB_PASSWORD}@kaspa_db:${DB_PORT}/${DB_NAME}
+      -s ws://kaspad:${KASPA_NODE_PORT}
+      -d postgresql://${DB_USER}:${DB_PASSWORD}@kaspa_db:5432/${DB_NAME}
       --exclude-fields=tx_out_script_public_key_address
       --prune-db
       --retention=7d
@@ -127,9 +127,9 @@ services:
     image: supertypo/simply-kaspa-indexer:latest
     restart: unless-stopped
     command: >
-      -s ws://${KASPA_NODE_ADDRESS}:${KASPA_NODE_PORT}
+      -s ws://kaspad:${KASPA_NODE_PORT}
       -l 0.0.0.0:8501
-      -d postgres://${DB_USER}:${DB_PASSWORD}@k-indexer-db:${DB_PORT}/${DB_NAME}
+      -d postgresql://${DB_USER}:${DB_PASSWORD}@k-indexer-db:${DB_PORT}/${DB_NAME}
       --prune-db="0 * * * *"
       --retention=1h
       --disable=virtual_chain_processing,transaction_acceptance,blocks_table,block_parent_table,blocks_transactions_table,transactions_inputs_table,transactions_outputs_table,addresses_transactions_table,initial_utxo_import,vcp_wait_for_sync
@@ -137,7 +137,7 @@ services:
     depends_on:
       - k-indexer-db
     ports:
-      - "${WEBSERVER_PORT}:8501"
+      - "8501:8501"
     healthcheck:
       test: ["CMD-SHELL", "netstat -tuln | grep ':8501 ' || exit 1"]
       interval: 30s
