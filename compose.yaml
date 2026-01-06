@@ -1,3 +1,5 @@
+version: "3.9"
+
 volumes:
   portainer_data:
   prometheus_data:
@@ -13,7 +15,7 @@ services:
     restart: unless-stopped
     ports:
       - "16110:16110"
-      - "17110:17110"
+      - "${KASPA_NODE_PORT}:${KASPA_NODE_PORT}"
     volumes:
       - /var/kaspad:/app/data/
     command: >
@@ -23,7 +25,7 @@ services:
       --disable-upnp
       --utxoindex
       --rpclisten=0.0.0.0:16110
-      --rpclisten-borsh=0.0.0.0:17110
+      --rpclisten-borsh=0.0.0.0:${KASPA_NODE_PORT}
 
   kaspa_db:
     container_name: kaspa_db
@@ -31,11 +33,11 @@ services:
     restart: unless-stopped
     shm_size: 4G
     environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: postgres
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_NAME}
     ports:
-      - "5432:5432"
+      - "${DB_PORT}:${DB_PORT}"
     volumes:
       - kaspa_db_data:/var/lib/postgresql/data/
 
@@ -44,8 +46,8 @@ services:
     image: kaspanet/kaspa-rest-server:latest
     restart: unless-stopped
     environment:
-      KASPAD_WRPC_URL: ws://kaspad:17110
-      SQL_URI: postgresql+asyncpg://postgres:postgres@kaspa_db:5432/postgres
+      KASPAD_WRPC_URL: ws://${KASPA_NODE_ADDRESS}:${KASPA_NODE_PORT}
+      SQL_URI: postgresql+asyncpg://${DB_USER}:${DB_PASSWORD}@kaspa_db:${DB_PORT}/${DB_NAME}
       USE_SCRIPT_FOR_ADDRESS: "true"
     ports:
       - "8000:8000"
@@ -57,7 +59,7 @@ services:
     container_name: simply_kaspa_socket_server
     image: supertypo/simply-kaspa-socket-server:unstable
     restart: unless-stopped
-    command: -x 20 -s ws://kaspad:17110
+    command: -x 20 -s ws://${KASPA_NODE_ADDRESS}:${KASPA_NODE_PORT}
     ports:
       - "8001:8000"
     depends_on:
@@ -69,8 +71,8 @@ services:
     restart: unless-stopped
     command: >
       -u
-      -s ws://kaspad:17110
-      -d postgresql://postgres:postgres@kaspa_db:5432/postgres
+      -s ws://${KASPA_NODE_ADDRESS}:${KASPA_NODE_PORT}
+      -d postgresql://${DB_USER}:${DB_PASSWORD}@kaspa_db:${DB_PORT}/${DB_NAME}
       --exclude-fields=tx_out_script_public_key_address
       --prune-db
       --retention=7d
@@ -100,12 +102,12 @@ services:
     restart: unless-stopped
     shm_size: 4G
     environment:
-      POSTGRES_USER: indexer
-      POSTGRES_PASSWORD: indexerpass
-      POSTGRES_DB: indexerdb
-      PGPORT: 5433
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_NAME}
+      PGPORT: ${DB_PORT}
     ports:
-      - "5433:5433"
+      - "${DB_PORT}:${DB_PORT}"
     volumes:
       - k_indexer_db_data:/var/lib/postgresql/data/
     command: >
@@ -114,7 +116,7 @@ services:
       -c pg_stat_statements.track=all
       -c pg_stat_statements.save=on
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U indexer"]
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER}"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -125,9 +127,9 @@ services:
     image: supertypo/simply-kaspa-indexer:latest
     restart: unless-stopped
     command: >
-      -s ws://kaspad:17110
+      -s ws://${KASPA_NODE_ADDRESS}:${KASPA_NODE_PORT}
       -l 0.0.0.0:8501
-      -d postgres://indexer:indexerpass@k-indexer-db:5433/indexerdb
+      -d postgres://${DB_USER}:${DB_PASSWORD}@k-indexer-db:${DB_PORT}/${DB_NAME}
       --prune-db="0 * * * *"
       --retention=1h
       --disable=virtual_chain_processing,transaction_acceptance,blocks_table,block_parent_table,blocks_transactions_table,transactions_inputs_table,transactions_outputs_table,addresses_transactions_table,initial_utxo_import,vcp_wait_for_sync
@@ -135,7 +137,7 @@ services:
     depends_on:
       - k-indexer-db
     ports:
-      - "8501:8501"
+      - "${WEBSERVER_PORT}:8501"
     healthcheck:
       test: ["CMD-SHELL", "netstat -tuln | grep ':8501 ' || exit 1"]
       interval: 30s
@@ -149,12 +151,12 @@ services:
     restart: unless-stopped
     command: >
       --upgrade-db
-      --network mainnet
+      --network ${NETWORK}
       --db-host k-indexer-db
-      --db-port 5433
-      --db-name indexerdb
-      --db-user indexer
-      --db-password indexerpass
+      --db-port ${DB_PORT}
+      --db-name ${DB_NAME}
+      --db-user ${DB_USER}
+      --db-password ${DB_PASSWORD}
       --db-max-connections 10
       --workers 4
       --channel transaction_channel
@@ -176,11 +178,11 @@ services:
     restart: unless-stopped
     command: >
       --db-host k-indexer-db
-      --db-port 5433
-      --db-name indexerdb
-      --db-user indexer
-      --db-password indexerpass
-      --bind-address 0.0.0.0:8600
+      --db-port ${DB_PORT}
+      --db-name ${DB_NAME}
+      --db-user ${DB_USER}
+      --db-password ${DB_PASSWORD}
+      --bind-address 0.0.0.0:${WEBSERVER_PORT}
       --worker-threads 6
       --db-max-connections 18
       --request-timeout 30
@@ -190,9 +192,9 @@ services:
       - simply-kaspa-indexer-2
       - k-transaction-processor
     ports:
-      - "8600:8600"
+      - "${WEBSERVER_PORT}:${WEBSERVER_PORT}"
     healthcheck:
-      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:8600/health || exit 1"]
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:${WEBSERVER_PORT}/health || exit 1"]
       interval: 30s
       timeout: 10s
       retries: 3
