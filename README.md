@@ -12,7 +12,7 @@ sudo apt install -y docker-compose
 
 > 2. Install NodeJS from https://nodejs.org/en/download
 
-> 3. K-indexer:
+> 3. Install Kaspa Services:
 ```
 git clone https://github.com/thesheepcat/K-indexer.git
 cd K-indexer/docker/PROD
@@ -27,7 +27,7 @@ nano compose.yaml
 sudo docker compose up -d
 ```
 
-> 4. Wait for Kaspad and indexer to fully sync:
+> 4. Wait for kaspad and indexer to fully sync:
 ```
 sudo docker logs -n 100 -f kaspad
 ```
