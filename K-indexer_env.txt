@@ -13,7 +13,7 @@ DB_USER=kaspa
 DB_PASSWORD=dbpassword
 DB_NAME=kaspa
 DB_PORT=5433
-WEBSERVER_PORT=3000
+WEBSERVER_PORT=3001
 
 # K-database-cleaner settings (only used with personal-indexer profile)
 USER_PUBKEY=your_pubkey_here
