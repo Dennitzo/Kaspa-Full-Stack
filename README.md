@@ -63,7 +63,7 @@ npm install
 npm run dev
 Open http://yourDomainOrIP:5173 in your Browser
 Go to Settings
-Set Indexer to "Custom Indexer", and set "Indexer URL" to http://yourDomainOrIP:8600
+Set Indexer to "Custom Indexer", and set "Indexer URL" to http://yourDomainOrIP:3001
 Set Kaspa node connection to "Your Kaspa node", and set "Kaspa node URL" to ws://yourDomainOrIP:17110
 ```
 
