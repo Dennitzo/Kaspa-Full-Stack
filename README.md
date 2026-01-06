@@ -39,7 +39,7 @@ cd kaspa-stratum-bridge/cmd/kaspabridge
 nano config.yaml
 
 ---Change "extranonce_size = 0"
-    to "extranonce_size = 2"
+---to     "extranonce_size = 2"
 ---Save and close File
 
 cd ..
@@ -48,7 +48,7 @@ nano docker-compose-all-src.yml
 
 ---Change "ports:
       - 3000:3000"
-    to "ports:
+---to "ports:
       - 5000:3000"
 ---Save and close File
 
@@ -59,6 +59,25 @@ docker compose -f docker-compose-all-src.yml up -d --build
 ```
 git clone https://github.com/thesheepcat/K.git
 cd K
+nano vite.config.ts
+---Change "server: {
+    host: true,
+    port: 5173,
+    fs: {
+      allow: ['..']
+    }
+  },"
+---to     "server: {
+    host: true,
+    port: 5173,
+    allowedHosts: [
+    'yourDomainOrIP',
+    ],
+    fs: {
+      allow: ['..']
+    }
+  },"
+---Save and close File
 npm install
 npm run dev
 Open http://yourDomainOrIP:5173 in your Browser
