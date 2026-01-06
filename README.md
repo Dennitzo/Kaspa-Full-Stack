@@ -39,7 +39,7 @@ cd kaspa-stratum-bridge/cmd/kaspabridge
 nano config.yaml
 
 ---Change "extranonce_size = 0"
----to     "extranonce_size = 2"
+---to "extranonce_size = 2"
 ---Save and close File
 
 cd ..
@@ -48,7 +48,7 @@ nano docker-compose-all-src.yml
 
 ---Change "ports:
       - 3000:3000"
----to "ports:
+---to  "ports:
       - 5000:3000"
 ---Save and close File
 
@@ -67,7 +67,7 @@ nano vite.config.ts
       allow: ['..']
     }
   },"
----to     "server: {
+---to "server: {
     host: true,
     port: 5173,
     allowedHosts: [
