@@ -9,11 +9,11 @@ KASPA_NODE_ADDRESS=kaspad
 KASPA_NODE_PORT=17110
 
 # Indexer database
-DB_USER=indexer
-DB_PASSWORD=indexerpass
-DB_NAME=indexerdb
+DB_USER=kaspa
+DB_PASSWORD=dbpassword
+DB_NAME=kaspa
 DB_PORT=5433
-WEBSERVER_PORT=8600
+WEBSERVER_PORT=3000
 
 # K-database-cleaner settings (only used with personal-indexer profile)
 USER_PUBKEY=your_pubkey_here
