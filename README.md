@@ -12,7 +12,7 @@ sudo apt install -y docker-compose
 
 > 2. Install NodeJS from https://nodejs.org/en/download
 ```
-sudo npm install -g npm
+sudo apt install nodejs npm
 ```
 
 > 3. Install Kaspa Services:
