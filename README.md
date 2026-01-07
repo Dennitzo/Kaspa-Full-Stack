@@ -11,8 +11,9 @@ sudo apt install -y docker-compose
 ```
 
 > 2. Install NodeJS from https://nodejs.org/en/download
-
-> 3. Install Kaspa Services:
+```
+sudo npm install -g npm
+``` 3. Install Kaspa Services:
 ```
 git clone https://github.com/thesheepcat/K-indexer.git
 cd K-indexer/docker/PROD
