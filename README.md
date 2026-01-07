@@ -26,6 +26,7 @@ nano .env
 rm compose.yaml
 nano compose.yaml
 ---Copy paste from https://github.com/Dennitzo/Kaspa-Full-Stack/blob/main/compose.yaml
+---Change "yourDomainOrIP" to your domain or ip without a port
 ---Save and close file
 sudo docker compose up -d
 ```
