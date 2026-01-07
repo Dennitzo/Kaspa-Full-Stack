@@ -1,6 +1,9 @@
 # Indexer profile
 COMPOSE_PROFILES=public-indexer
 
+# Insert your domain or ip
+SERVER_ADDRESS=yourDomainOrIP
+
 # Network type
 NETWORK=mainnet
 
