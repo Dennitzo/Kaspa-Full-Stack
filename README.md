@@ -81,6 +81,7 @@ nano vite.config.ts
       allow: ['..']
     }
   },"
+---Change "yourDomainOrIP" to your domain or ip (for example: test.com)
 ---Save and close File
 sudo npm install
 sudo npm run dev
