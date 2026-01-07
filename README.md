@@ -4,6 +4,8 @@
 
 > 1. Install Docker:
 ```
+sudo apt-get update
+sudo apt-get upgrade
 sudo apt install -y curl
 sudo curl -fsSL https://get.docker.com -o get-docker.sh
 sudo sh get-docker.sh
