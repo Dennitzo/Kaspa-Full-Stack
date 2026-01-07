@@ -22,11 +22,11 @@ cd K-indexer/docker/PROD
 rm .env
 nano .env
 ---Copy paste from https://github.com/Dennitzo/Kaspa-Full-Stack/blob/main/K-indexer_env.txt
+---Change "yourDomainOrIP" to your domain or ip (for example: test.com)
 ---Save and close file
 rm compose.yaml
 nano compose.yaml
 ---Copy paste from https://github.com/Dennitzo/Kaspa-Full-Stack/blob/main/compose.yaml
----Change "yourDomainOrIP" to your domain or ip without a port
 ---Save and close file
 sudo docker compose up -d
 ```
