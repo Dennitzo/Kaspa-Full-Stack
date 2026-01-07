@@ -1,21 +1,28 @@
-# Indexer profile: "public-indexer" or "personal-indexer"
+# Indexer profile
 COMPOSE_PROFILES=public-indexer
 
-# Network type: "testnet-10" or "mainnet"
+# Network type
 NETWORK=mainnet
 
-# Kaspa node connection
+# Kaspa node (wRPC WebSocket)
 KASPA_NODE_ADDRESS=kaspad
 KASPA_NODE_PORT=17110
+
+# REST + Socket exposure (matching original behavior)
+KASPA_REST_PORT=8000
+KASPA_SOCKET_PORT=8001
+KASPA_EXPLORER_PORT=8080
 
 # Indexer database
 DB_USER=kaspa
 DB_PASSWORD=dbpassword
 DB_NAME=kaspa
 DB_PORT=5433
+
+# Webserver
 WEBSERVER_PORT=3001
 
-# K-database-cleaner settings (only used with personal-indexer profile)
+# Optional cleaner (unused in public profile)
 USER_PUBKEY=your_pubkey_here
 DATA_RETENTION=72
 PURGE_INTERVAL=600
