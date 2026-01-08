@@ -1,17 +1,17 @@
-# Indexer profile
-COMPOSE_PROFILES=public-indexer
-
 # Insert your domain or ip
 SERVER_ADDRESS=yourDomainOrIP
+
+# Indexer profile
+COMPOSE_PROFILES=public-indexer
 
 # Network type
 NETWORK=mainnet
 
-# Kaspa node (wRPC WebSocket)
+# Kaspa node
 KASPA_NODE_ADDRESS=kaspad
 KASPA_NODE_PORT=17110
 
-# REST + Socket exposure (matching original behavior)
+# REST + Socket exposure
 KASPA_REST_PORT=8000
 KASPA_SOCKET_PORT=8001
 KASPA_EXPLORER_PORT=8080
