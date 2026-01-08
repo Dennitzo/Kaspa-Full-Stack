@@ -1,10 +1,8 @@
 volumes:
   kaspa_db_data:
-  k_indexer_db_data:
   portainer_data:
 
 services:
-  # ---------------- KASPA NODE ----------------
   kaspad:
     container_name: kaspad
     image: supertypo/rusty-kaspad:latest
@@ -23,7 +21,6 @@ services:
       --rpclisten=0.0.0.0:16110
       --rpclisten-borsh=0.0.0.0:${KASPA_NODE_PORT}
 
-  # ---------------- DATABASE (REST / EXPLORER) ----------------
   kaspa_db:
     container_name: kaspa_db
     image: postgres:17-alpine
@@ -34,18 +31,17 @@ services:
       POSTGRES_PASSWORD: ${DB_PASSWORD}
       POSTGRES_DB: ${DB_NAME}
     ports:
-      - "5432:5432"
+      - "${DB_PORT}:${DB_PORT}"
     volumes:
       - kaspa_db_data:/var/lib/postgresql/data/
 
-  # ---------------- REST SERVER ----------------
   kaspa_rest_server:
     container_name: kaspa_rest_server
     image: kaspanet/kaspa-rest-server:latest
     restart: unless-stopped
     environment:
       KASPAD_WRPC_URL: ws://${KASPA_NODE_ADDRESS}:${KASPA_NODE_PORT}
-      SQL_URI: postgresql+asyncpg://${DB_USER}:${DB_PASSWORD}@kaspa_db:5432/${DB_NAME}
+      SQL_URI: postgresql+asyncpg://${DB_USER}:${DB_PASSWORD}@kaspa_db:${DB_PORT}/${DB_NAME}
       USE_SCRIPT_FOR_ADDRESS: "true"
     ports:
       - "8000:8000"
@@ -53,7 +49,6 @@ services:
       - kaspad
       - kaspa_db
 
-  # ---------------- SOCKET SERVER ----------------
   simply_kaspa_socket_server:
     container_name: simply_kaspa_socket_server
     image: supertypo/simply-kaspa-socket-server:unstable
@@ -64,7 +59,6 @@ services:
     depends_on:
       - kaspad
 
-  # ---------------- INDEXER (LEGACY) ----------------
   simply_kaspa_indexer:
     container_name: simply_kaspa_indexer
     image: supertypo/simply-kaspa-indexer:latest
@@ -72,17 +66,48 @@ services:
     command: >
       -u
       -s ws://${KASPA_NODE_ADDRESS}:${KASPA_NODE_PORT}
-      -d postgresql://${DB_USER}:${DB_PASSWORD}@kaspa_db:5432/${DB_NAME}
-      --exclude-fields=tx_out_script_public_key_address
-      --prune-db
+      -d postgresql://${DB_USER}:${DB_PASSWORD}@kaspa_db:${DB_PORT}/${DB_NAME}
       --retention=7d
-    ports:
-      - "8500:8500"
+      --exclude-fields=tx_out_script_public_key_address
     depends_on:
       - kaspad
       - kaspa_db
 
-  # ---------------- EXPLORER ----------------
+  k-transaction-processor:
+    container_name: k-transaction-processor
+    image: thesheepcat/k-transaction-processor:latest
+    restart: unless-stopped
+    command: >
+      --upgrade-db
+      --network ${NETWORK}
+      --db-host kaspa_db
+      --db-port ${DB_PORT}
+      --db-name ${DB_NAME}
+      --db-user ${DB_USER}
+      --db-password ${DB_PASSWORD}
+      --workers 4
+    depends_on:
+      - kaspa_db
+      - simply_kaspa_indexer
+
+  k-webserver:
+    container_name: k-webserver
+    image: thesheepcat/k-webserver:latest
+    restart: unless-stopped
+    command: >
+      --db-host kaspa_db
+      --db-port ${DB_PORT}
+      --db-name ${DB_NAME}
+      --db-user ${DB_USER}
+      --db-password ${DB_PASSWORD}
+      --bind-address 0.0.0.0:${WEBSERVER_PORT}
+    ports:
+      - "${WEBSERVER_PORT}:${WEBSERVER_PORT}"
+    depends_on:
+      - kaspa_db
+      - simply_kaspa_indexer
+      - k-transaction-processor
+
   kaspa_explorer:
     container_name: kaspa_explorer
     image: supertypo/kaspa-explorer:latest
@@ -96,90 +121,6 @@ services:
       - kaspa_rest_server
       - simply_kaspa_socket_server
 
-  # ---------------- INDEXER 2.0 DATABASE ----------------
-  k-indexer-db:
-    container_name: k-indexer-db
-    image: postgres:17-alpine
-    restart: unless-stopped
-    shm_size: 4G
-    environment:
-      POSTGRES_USER: ${DB_USER}
-      POSTGRES_PASSWORD: ${DB_PASSWORD}
-      POSTGRES_DB: ${DB_NAME}
-      PGPORT: ${DB_PORT}
-    ports:
-      - "${DB_PORT}:${DB_PORT}"
-    volumes:
-      - k_indexer_db_data:/var/lib/postgresql/data/
-    command: >
-      -c shared_preload_libraries=pg_stat_statements
-      -c pg_stat_statements.max=10000
-      -c pg_stat_statements.track=all
-      -c pg_stat_statements.save=on
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${DB_USER}"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-      start_period: 30s
-
-  # ---------------- INDEXER 2.0 ----------------
-  simply-kaspa-indexer-2:
-    profiles: ["public-indexer", "personal-indexer"]
-    container_name: simply-kaspa-indexer-2
-    image: supertypo/simply-kaspa-indexer:latest
-    restart: unless-stopped
-    command: -s ws://${KASPA_NODE_ADDRESS}:${KASPA_NODE_PORT} -l 0.0.0.0:8501 -n ${NETWORK} -d postgresql://${DB_USER}:${DB_PASSWORD}@k-indexer-db:${DB_PORT}/${DB_NAME} --prune-db="0 * * * *" --retention=1h --disable=virtual_chain_processing,transaction_acceptance,blocks_table,block_parent_table,blocks_transactions_table,transactions_inputs_table,transactions_outputs_table,addresses_transactions_table,initial_utxo_import,vcp_wait_for_sync --exclude-fields=block_accepted_id_merkle_root,block_merge_set_blues_hashes,block_merge_set_reds_hashes,block_selected_parent_hash,block_bits,block_blue_work,block_blue_score,block_daa_score,block_hash_merkle_root,block_nonce,block_pruning_point,block_timestamp,block_utxo_commitment,block_version,tx_subnetwork_id,tx_hash,tx_mass,tx_in_previous_outpoint,tx_in_signature_script,tx_in_sig_op_count,tx_in_block_time,tx_out_amount,tx_out_script_public_key,tx_out_script_public_key_address,tx_out_block_time
-    ports:
-      - "8501:8501"
-    depends_on:
-      k-indexer-db:
-        condition: service_healthy
-    healthcheck:
-      test: ["CMD-SHELL", "netstat -tuln | grep ':8501 ' || exit 1"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 60s
-
-  # ---------------- TRANSACTION PROCESSOR ----------------
-  k-transaction-processor:
-    container_name: k-transaction-processor
-    image: thesheepcat/k-transaction-processor:latest
-    restart: unless-stopped
-    command: >
-      --upgrade-db
-      --network ${NETWORK}
-      --db-host k-indexer-db
-      --db-port ${DB_PORT}
-      --db-name ${DB_NAME}
-      --db-user ${DB_USER}
-      --db-password ${DB_PASSWORD}
-      --workers 4
-    depends_on:
-      - k-indexer-db
-      - simply-kaspa-indexer-2
-
-  # ---------------- WEBSERVER ----------------
-  k-webserver:
-    container_name: k-webserver
-    image: thesheepcat/k-webserver:latest
-    restart: unless-stopped
-    command: >
-      --db-host k-indexer-db
-      --db-port ${DB_PORT}
-      --db-name ${DB_NAME}
-      --db-user ${DB_USER}
-      --db-password ${DB_PASSWORD}
-      --bind-address 0.0.0.0:${WEBSERVER_PORT}
-    ports:
-      - "${WEBSERVER_PORT}:${WEBSERVER_PORT}"
-    depends_on:
-      - k-indexer-db
-      - simply-kaspa-indexer-2
-      - k-transaction-processor
-
-  # ---------------- PORTAINER ----------------
   portainer:
     container_name: portainer
     image: portainer/portainer-ce:latest
