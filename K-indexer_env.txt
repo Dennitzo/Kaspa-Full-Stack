@@ -1,4 +1,4 @@
-# Insert your domain or ip
+# Insert your domain or ip (for example: test.com)
 SERVER_ADDRESS=yourDomainOrIP
 
 # Indexer profile
