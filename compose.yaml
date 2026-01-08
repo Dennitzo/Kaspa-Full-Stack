@@ -1,5 +1,3 @@
-version: "3.9"
-
 volumes:
   kaspa_db_data:
   k_indexer_db_data:
@@ -46,7 +44,7 @@ services:
     image: kaspanet/kaspa-rest-server:latest
     restart: unless-stopped
     environment:
-      KASPAD_WRPC_URL: ws://kaspad:${KASPA_NODE_PORT}
+      KASPAD_WRPC_URL: ws://${KASPA_NODE_ADDRESS}:${KASPA_NODE_PORT}
       SQL_URI: postgresql+asyncpg://${DB_USER}:${DB_PASSWORD}@kaspa_db:5432/${DB_NAME}
       USE_SCRIPT_FOR_ADDRESS: "true"
     ports:
@@ -60,7 +58,7 @@ services:
     container_name: simply_kaspa_socket_server
     image: supertypo/simply-kaspa-socket-server:unstable
     restart: unless-stopped
-    command: -x 20 -s ws://kaspad:${KASPA_NODE_PORT}
+    command: -x 20 -s ws://${KASPA_NODE_ADDRESS}:${KASPA_NODE_PORT}
     ports:
       - "8001:8000"
     depends_on:
@@ -73,7 +71,7 @@ services:
     restart: unless-stopped
     command: >
       -u
-      -s ws://kaspad:${KASPA_NODE_PORT}
+      -s ws://${KASPA_NODE_ADDRESS}:${KASPA_NODE_PORT}
       -d postgresql://${DB_USER}:${DB_PASSWORD}@kaspa_db:5432/${DB_NAME}
       --exclude-fields=tx_out_script_public_key_address
       --prune-db
@@ -118,21 +116,31 @@ services:
       -c pg_stat_statements.max=10000
       -c pg_stat_statements.track=all
       -c pg_stat_statements.save=on
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
 
   # ---------------- INDEXER 2.0 ----------------
   simply-kaspa-indexer-2:
+    profiles: ["public-indexer", "personal-indexer"]
     container_name: simply-kaspa-indexer-2
     image: supertypo/simply-kaspa-indexer:latest
     restart: unless-stopped
-    command: >
-      -s ws://kaspad:${KASPA_NODE_PORT}
-      -l 0.0.0.0:8501
-      -d postgresql://${DB_USER}:${DB_PASSWORD}@k-indexer-db:${DB_PORT}/${DB_NAME}
-      --retention=1h
+    command: -s ws://${KASPA_NODE_ADDRESS}:${KASPA_NODE_PORT} -l 0.0.0.0:8501 -n ${NETWORK} -d postgresql://${DB_USER}:${DB_PASSWORD}@k-indexer-db:${DB_PORT}/${DB_NAME} --prune-db="0 * * * *" --retention=1h --disable=virtual_chain_processing,transaction_acceptance,blocks_table,block_parent_table,blocks_transactions_table,transactions_inputs_table,transactions_outputs_table,addresses_transactions_table,initial_utxo_import,vcp_wait_for_sync --exclude-fields=block_accepted_id_merkle_root,block_merge_set_blues_hashes,block_merge_set_reds_hashes,block_selected_parent_hash,block_bits,block_blue_work,block_blue_score,block_daa_score,block_hash_merkle_root,block_nonce,block_pruning_point,block_timestamp,block_utxo_commitment,block_version,tx_subnetwork_id,tx_hash,tx_mass,tx_in_previous_outpoint,tx_in_signature_script,tx_in_sig_op_count,tx_in_block_time,tx_out_amount,tx_out_script_public_key,tx_out_script_public_key_address,tx_out_block_time
     ports:
       - "8501:8501"
     depends_on:
-      - k-indexer-db
+      k-indexer-db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "netstat -tuln | grep ':8501 ' || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
 
   # ---------------- TRANSACTION PROCESSOR ----------------
   k-transaction-processor:
