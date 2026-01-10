@@ -38,7 +38,7 @@ sudo docker compose up -d
 sudo docker logs -n 100 -f kaspad
 ```
 
-> 5. Kaspa Stratum Bridge:
+> 5. Kaspa Stratum Bridge (Optional):
 ```
 git clone https://github.com/rdugan/kaspa-stratum-bridge.git
 cd kaspa-stratum-bridge/cmd/kaspabridge
